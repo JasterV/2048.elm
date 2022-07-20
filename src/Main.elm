@@ -1,10 +1,18 @@
 module Main exposing (..)
 
 import Browser
-import Element as UI
+import Browser.Events
+import Cmd exposing (generateRandomPositionedCell)
+import Element exposing (..)
 import Game
 import Html exposing (Html)
-import Msg exposing (Msg)
+import Json.Decode as Decode
+import Msg exposing (KeyEvent(..), Msg(..))
+import View
+
+
+
+-- MAIN
 
 
 type alias Document msg =
@@ -19,89 +27,100 @@ main =
         { init = init
         , update = update
         , view = view
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
+
+
+
+-- INIT
 
 
 init : () -> ( Game.Model, Cmd Msg )
 init _ =
-    ( Game.initialModel
-    , Cmd.none
+    let
+        model =
+            Game.initialModel
+    in
+    ( model
+    , generateRandomPositionedCell model
     )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Game.Model -> Sub Msg
+subscriptions _ =
+    Browser.Events.onKeyDown keyDecoder
+
+
+keyDecoder : Decode.Decoder Msg
+keyDecoder =
+    Decode.map toMsg (Decode.field "key" Decode.string)
+
+
+toMsg : String -> Msg
+toMsg string =
+    case string of
+        "ArrowLeft" ->
+            Msg.KeyPressed KeyEventArrowLeft
+
+        "ArrowRight" ->
+            Msg.KeyPressed KeyEventArrowRight
+
+        "ArrowDown" ->
+            Msg.KeyPressed KeyEventArrowDown
+
+        "ArrowUp" ->
+            Msg.KeyPressed KeyEventArrowUp
+
+        _ ->
+            Msg.KeyPressed KeyEventUnknown
+
+
+
+-- UPDATE
 
 
 update : Msg -> Game.Model -> ( Game.Model, Cmd Msg )
 update msg model =
     case msg of
-        Msg.ArrowDown ->
-            ( model |> Game.moveDown
+        Msg.KeyPressed KeyEventUnknown ->
+            ( model, Cmd.none )
+
+        Msg.KeyPressed key ->
+            let
+                newModel : Game.Model
+                newModel =
+                    key
+                        |> Msg.keyToDirection
+                        |> Maybe.map (Game.move model)
+                        |> Maybe.withDefault model
+
+                cmd =
+                    if newModel == model then
+                        Cmd.none
+
+                    else
+                        generateRandomPositionedCell newModel
+            in
+            ( newModel, cmd )
+
+        Msg.RandomCellGenerated ( position, cell ) ->
+            ( position
+                |> Maybe.map (Game.addCell model cell)
+                |> Maybe.withDefault model
             , Cmd.none
             )
 
-        Msg.ArrowUp ->
-            ( model |> Game.moveUp
-            , Cmd.none
-            )
 
-        Msg.ArrowLeft ->
-            ( model |> Game.moveLeft
-            , Cmd.none
-            )
 
-        Msg.ArrowRight ->
-            ( model |> Game.moveRight
-            , Cmd.none
-            )
+-- VIEW
 
 
 view : Game.Model -> Document Msg
 view model =
     { title = "2048"
-    , body = view_ model
+    , body = View.game model
     }
-
-
-view_ : Game.Model -> List (Html Msg)
-view_ model =
-    [ UI.layout [] <|
-        UI.column []
-            [ viewScore_ model.score
-            , viewBoard_ model.board
-            ]
-    ]
-
-
-viewScore_ : Int -> UI.Element Msg
-viewScore_ score =
-    score
-        |> String.fromInt
-        |> UI.text
-        |> List.singleton
-        |> UI.row []
-
-
-viewBoard_ : Game.Board -> UI.Element Msg
-viewBoard_ board =
-    board
-        |> List.map viewBoardRow_
-        |> UI.column []
-
-
-viewBoardRow_ : List Game.Cell -> UI.Element Msg
-viewBoardRow_ cells =
-    cells
-        |> List.map viewCell_
-        |> UI.row []
-
-
-viewCell_ : Game.Cell -> UI.Element Msg
-viewCell_ cell =
-    let
-        value : String
-        value =
-            cell
-                |> Maybe.map String.fromInt
-                |> Maybe.withDefault "-"
-    in
-    UI.column []
-        [ UI.text value ]
