@@ -20,15 +20,20 @@ game model =
     ]
 
 
+mainColor : Color
+mainColor =
+    rgb 1 0.7 0.5
+
+
 score_ : Int -> Element Msg
-score_ score =
-    score
-        |> String.fromInt
-        |> (++) "Score: "
-        |> text
+score_ _ =
+    -- score
+    --     |> String.fromInt
+    -- |> (++) "Score: "
+    text "Welcome :)"
         |> Element.el [ centerY, centerX ]
         |> List.singleton
-        |> row [ width fill, height <| fillPortion 1, paddingXY 5 5 ]
+        |> row [ width fill, height <| fillPortion 1, paddingXY 5 5, Element.Font.bold, Element.Font.color mainColor ]
 
 
 board_ : Game.Board -> Element Msg
@@ -58,9 +63,9 @@ cell_ cell =
                 |> Maybe.withDefault "  "
     in
     column
-        [ padding 30
+        [ padding 60
         , Element.Border.rounded 10
         , Element.Font.semiBold
-        , Element.Background.color (rgb 1 0.7 0.5)
+        , Element.Background.color mainColor
         ]
         [ text value ]
