@@ -7,4 +7,5 @@ elm-stuff
 # elm-repl generated files
 repl-temp-*
 
+public/*.js
 # End of https://www.toptal.com/developers/gitignore/api/elm
