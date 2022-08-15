@@ -26,11 +26,11 @@ mainColor =
 
 
 score_ : Int -> Element Msg
-score_ _ =
-    -- score
-    --     |> String.fromInt
-    -- |> (++) "Score: "
-    text "Welcome :)"
+score_ score =
+    score
+        |> String.fromInt
+        |> (++) "Score: "
+        |> Element.text
         |> Element.el [ centerY, centerX ]
         |> List.singleton
         |> row [ width fill, height <| fillPortion 1, paddingXY 5 5, Element.Font.bold, Element.Font.color mainColor ]

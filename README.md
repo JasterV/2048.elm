@@ -8,6 +8,6 @@ You can use the arrow keys to move the numbers on the board.
 
 ## TODO
 
-+ [ ] Add scoring system
++ [x] Add scoring system
 + [ ] Add a message when winning or losing
 + [ ] Improve styling

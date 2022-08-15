@@ -116,98 +116,145 @@ addCell model cell position =
     { model | board = newBoard }
 
 
-setBoard : Model -> Board -> Model
-setBoard model board =
+setBoard : Board -> Model -> Model
+setBoard board model =
     { model | board = board }
+
+
+addScore : Int -> Model -> Model
+addScore score model =
+    { model | score = model.score + score }
 
 
 foldUp_ : Model -> Model
 foldUp_ model =
     let
-        newBoard =
+        result =
             model.board
                 |> Array.toList
                 >> List.map Array.toList
                 >> List.Extra.transpose
                 >> List.map foldRowLeft_
-                >> List.Extra.transpose
-                >> List.map Array.fromList
-                >> Array.fromList
+                >> (\rows -> ( rows |> List.map Tuple.first, rows |> List.map Tuple.second ))
+                >> Tuple.mapBoth
+                    (List.foldl (+) 0)
+                    (List.Extra.transpose
+                        >> List.map Array.fromList
+                        >> Array.fromList
+                    )
+
+        score =
+            Tuple.first result
+
+        newBoard =
+            Tuple.second result
     in
-    setBoard model newBoard
+    model
+        |> setBoard newBoard
+        |> addScore score
 
 
 foldDown_ : Model -> Model
 foldDown_ model =
     let
-        newBoard =
+        result =
             model.board
                 |> Array.toList
                 >> List.map Array.toList
                 >> List.Extra.transpose
                 >> List.map foldRowRight_
-                >> List.Extra.transpose
-                >> List.map Array.fromList
-                >> Array.fromList
+                >> (\rows -> ( rows |> List.map Tuple.first, rows |> List.map Tuple.second ))
+                >> Tuple.mapBoth
+                    (List.foldl (+) 0)
+                    (List.Extra.transpose
+                        >> List.map Array.fromList
+                        >> Array.fromList
+                    )
+
+        score =
+            Tuple.first result
+
+        newBoard =
+            Tuple.second result
     in
-    setBoard model newBoard
+    model
+        |> setBoard newBoard
+        |> addScore score
 
 
 foldLeft_ : Model -> Model
 foldLeft_ model =
     let
+        result =
+            model.board |> Array.map (Array.toList >> foldRowLeft_ >> Tuple.mapSecond Array.fromList)
+
+        points =
+            result |> Array.map Tuple.first |> Array.foldl (+) 0
+
         newBoard =
-            model.board |> Array.map (Array.toList >> foldRowLeft_ >> Array.fromList)
+            Array.map Tuple.second result
     in
-    setBoard model newBoard
+    model
+        |> setBoard newBoard
+        |> addScore points
 
 
 foldRight_ : Model -> Model
 foldRight_ model =
     let
+        result =
+            model.board |> Array.map (Array.toList >> foldRowRight_ >> Tuple.mapSecond Array.fromList)
+
+        points =
+            result |> Array.map Tuple.first |> Array.foldl (+) 0
+
         newBoard =
-            model.board |> Array.map (Array.toList >> foldRowRight_ >> Array.fromList)
+            Array.map Tuple.second result
     in
-    setBoard model newBoard
+    model
+        |> setBoard newBoard
+        |> addScore points
 
 
-foldRowLeft_ : List Cell -> List Cell
+foldRowLeft_ : List Cell -> ( Int, List Cell )
 foldRowLeft_ =
-    List.reverse >> foldRowRight_ >> List.reverse
+    List.reverse >> foldRowRight_ >> Tuple.mapSecond List.reverse
 
 
-foldRowRight_ : List Cell -> List Cell
+foldRowRight_ : List Cell -> ( Int, List Cell )
 foldRowRight_ row =
     row
         |> List.filter ((/=) Nothing)
         |> List.map (Maybe.withDefault 0)
         |> foldNumsListRight_
-        |> List.map Just
-        |> (\folded -> List.repeat (List.length row - List.length folded) Nothing ++ folded)
+        |> Tuple.mapSecond
+            (List.map Just
+                >> (\folded -> List.repeat (List.length row - List.length folded) Nothing ++ folded)
+            )
 
 
-foldNumsListRight_ : List Int -> List Int
+foldNumsListRight_ : List Int -> ( Int, List Int )
 foldNumsListRight_ =
-    doFoldNumsListRight_ [ 0 ]
+    doFoldNumsListRight_ 0 [ 0 ]
 
 
-doFoldNumsListRight_ : List Int -> List Int -> List Int
-doFoldNumsListRight_ result original =
+doFoldNumsListRight_ : Int -> List Int -> List Int -> ( Int, List Int )
+doFoldNumsListRight_ score result original =
     case original of
         [] ->
-            List.filter ((/=) 0) result
+            ( score, List.filter ((/=) 0) result )
 
         _ ->
             case ( List.Extra.last original, List.head result ) of
                 ( Just last, Just first ) ->
                     if last == first then
-                        doFoldNumsListRight_ ([ 0, last + last ] ++ (List.tail result |> Maybe.withDefault [])) (pop_ original)
+                        doFoldNumsListRight_ (score + last + last) ([ 0, last + last ] ++ (List.tail result |> Maybe.withDefault [])) (pop_ original)
 
                     else
-                        doFoldNumsListRight_ (last :: result) (pop_ original)
+                        doFoldNumsListRight_ score (last :: result) (pop_ original)
 
                 _ ->
-                    []
+                    ( score, [] )
 
 
 move : Model -> Direction -> Model
